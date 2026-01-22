@@ -28,7 +28,7 @@ readonly class HttpResponse
         } while ($headersBlockPosition < $headersBlockSize);
 
         if ($this->body instanceof StreamBody) {
-            yield $this->body->read($size);
+            yield from $this->body->read($size);
         }
     }
 

@@ -17,8 +17,9 @@ readonly class HttpRequestFactory
         string $protocol,
         array $headers,
         string $body = '',
+        string $source = '',
     ): HttpRequest {
-        return new HttpRequest($method, $path, $protocol, $headers, $body, '');
+        return new HttpRequest($method, $path, $protocol, $headers, $body, $source);
     }
 
     public function createFromContent(string $content): HttpRequest
@@ -31,6 +32,7 @@ readonly class HttpRequestFactory
             $firstHeader[2],
             $otherHeaders,
             $body,
+            $content,
         );
     }
 }

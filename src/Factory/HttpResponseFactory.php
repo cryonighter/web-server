@@ -3,6 +3,7 @@
 namespace Factory;
 
 use DTO\HttpResponse;
+use DTO\StreamBody;
 use Exception\HttpException;
 use Parser\HttpParser;
 use Throwable;
@@ -18,7 +19,7 @@ readonly class HttpResponseFactory
         int $code,
         string $message,
         array $headers,
-        string $body = '',
+        StreamBody|string $body = '',
     ): HttpResponse {
         return new HttpResponse($protocol, $code, $message, $headers, $body);
     }

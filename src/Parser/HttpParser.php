@@ -17,16 +17,23 @@ class HttpParser
             throw new RuntimeException('Empty http request headers');
         }
 
-        $firstHeader = preg_split('/ +/', array_shift($headers));
+        $firstHeader = $this->parseFirstHeader(array_shift($headers));
+
+        return [$firstHeader, $this->parseOtherHeaders($headers), $body];
+    }
+
+    public function parseFirstHeader(string $row): array
+    {
+        $firstHeader = preg_split('/ +/', $row);
 
         if (count($firstHeader) < 3) {
             throw new RuntimeException('Invalid headers content');
         }
 
-        return [$firstHeader, $this->parseHeaders($headers), $body];
+        return $firstHeader;
     }
 
-    private function parseHeaders(array $rows): array
+    private function parseOtherHeaders(array $rows): array
     {
         $headers = [];
 

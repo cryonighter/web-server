@@ -2,6 +2,9 @@
 
 A simple web server written in PHP. Created as a pet project to improve understanding of web servers and server protocols.
 
+## Documentation
+- [Hosts Configuration](docs/configuration-hosts.md)
+
 ## Highlights
 
 - Written entirely in PHP

@@ -55,4 +55,15 @@ class HttpException extends Exception
 
         return new static($message, $code, $exception);
     }
+
+    public function is4xx(): bool
+    {
+        return $this->code >= 400 && $this->code < 500;
+
+    }
+
+    public function is5xx(): bool
+    {
+        return $this->code >= 500 && $this->code < 600;
+    }
 }

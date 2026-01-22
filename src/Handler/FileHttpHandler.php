@@ -16,7 +16,7 @@ readonly class FileHttpHandler
     /**
      * @throws HttpException
      */
-    public function handle(HttpRequest $request, string $webroot): HttpResponse
+    public function handle(HttpRequest $request, string $webroot, array $indexFiles): HttpResponse
     {
         if (!in_array($request->method, ['GET', 'HEAD'])) {
             throw HttpException::createFromCode(405);
@@ -25,7 +25,7 @@ readonly class FileHttpHandler
         $file = $webroot . $request->path;
 
         if (!$request->path || $request->path == '/') {
-            $file = $this->getIndexFile($webroot);
+            $file = $this->getIndexFile($webroot, $indexFiles);
         }
 
         // Дабы не давать пользователю информацию о наличии/отсутствии
@@ -59,9 +59,9 @@ readonly class FileHttpHandler
     /**
      * @throws HttpException
      */
-    private function getIndexFile(string $webroot): string
+    private function getIndexFile(string $webroot, array $indexFiles): string
     {
-        foreach (['index.html', 'index.htm'] as $defaultIndexFile) {
+        foreach ($indexFiles as $defaultIndexFile) {
             $file = "$webroot/$defaultIndexFile";
 
             if (file_exists($file) && is_readable($file) && !is_dir($file)) {
