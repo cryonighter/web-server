@@ -3,15 +3,20 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning v2.0.0](http://semver.org/).
 
+## [0.3.0] - 2026-01-24
+### Added
+- HTTPS support
+- Support for multiple ports
+
 ## [0.2.0] - 2026-01-23
 ### Added
-- Added hosts configuration using XML files
-- Added request routing based on regular expressions
-- Added redirect and request forwarding handlers
-- Added logging
+- Hosts configuration using XML files
+- Request routing based on regular expressions
+- Redirect and request forwarding handlers
+- Logging
 
 ### Fixed
-- Fixed a bug with data stream transmission when generating a server response
+- Bug with data stream transmission when generating a server response
 
 ## [0.1.0] - 2026-01-20
 ### Added

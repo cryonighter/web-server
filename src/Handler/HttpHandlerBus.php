@@ -17,17 +17,15 @@ readonly class HttpHandlerBus
     public function __construct(
         private HttpRouter $router,
         private array $handlers,
-        private array $hostConfigs,
-        private HostConfig $defaultHostConfig,
     ) {
     }
 
     /**
      * @throws HttpException
      */
-    public function handle(HttpRequest $request): HttpResponse
+    public function handle(HttpRequest $request, HostConfig $rootHostConfig): HttpResponse
     {
-        $hostConfig = $this->router->getConfig($request, $this->hostConfigs, $this->defaultHostConfig);
+        $hostConfig = $this->router->getRouteConfig($request, $rootHostConfig);
         $handlerConfig = $hostConfig->handler;
 
         if ($handlerConfig instanceof FileHandlerConfig) {
@@ -51,6 +49,6 @@ readonly class HttpHandlerBus
             return $handler->handle($request, $handlerConfig->to, $handlerConfig->code);
         }
 
-        throw new HttpException(500);
+        throw HttpException::createFromCode(500);
     }
 }

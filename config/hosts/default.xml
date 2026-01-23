@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<config name="default">
+<config name="default" port="8080">
     <webroot>./webroot</webroot>
 
     <indexFile>index.html</indexFile>

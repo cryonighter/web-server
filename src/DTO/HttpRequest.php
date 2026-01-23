@@ -28,7 +28,7 @@ class HttpRequest
 
     public function getHost(): ?string
     {
-        return current($this->headers['Host']) ?: null;
+        return current($this->headers['Host'] ?? []) ?: null;
     }
 
     public function getQuery(): array

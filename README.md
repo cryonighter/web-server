@@ -16,6 +16,7 @@ A simple web server written in PHP. Created as a pet project to improve understa
 You need:
 
 - **PHP >= 8.4.0** but the latest stable version of PHP is recommended
+- **ext-openssl**
 
 ## Install
 

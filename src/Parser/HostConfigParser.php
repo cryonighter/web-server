@@ -10,6 +10,7 @@ use DTO\Config\HandlerConfig\HandlerConfigInterface;
 use DTO\Config\HandlerConfig\RedirectHandlerConfig;
 use DTO\Config\HostConfig;
 use DTO\Config\PathHostConfig;
+use DTO\Config\TlsHostConfig;
 use RuntimeException;
 
 class HostConfigParser
@@ -18,11 +19,13 @@ class HostConfigParser
     {
         return new HostConfig(
             'default',
+            80,
             './webroot',
             new FileHandlerConfig(),
             [],
             ['index.html', 'index.htm'],
             [],
+            null,
         );
     }
 
@@ -48,7 +51,11 @@ class HostConfigParser
 
             $config = $this->create($document->documentElement, $this->createDefault());
 
-            $configs[$config->name ?: uniqid('host_config_')] = $config;
+            if (isset($configs[$config->port])) {
+                throw new RuntimeException("A configuration with port $config->port already exists");
+            }
+
+            $configs[$config->port] = $config;
         }
 
         return $configs;
@@ -58,6 +65,7 @@ class HostConfigParser
     {
         $webroot = null;
         $handler = null;
+        $tls = null;
         $hosts = [];
         $indexFiles = [];
         $paths = [];
@@ -82,6 +90,13 @@ class HostConfigParser
                 $handler = $this->createHandlerConfig($childNode);
             }
 
+            if ($tagName == 'tls') {
+                if ($tls) {
+                    throw new RuntimeException('The config must have only one tls');
+                }
+                $tls = $this->createTLSConfig($childNode);
+            }
+
             if ($tagName == 'host') {
                 $hosts[] = $childNode->nodeValue;
             }
@@ -96,17 +111,20 @@ class HostConfigParser
         }
 
         $name = $configElement->getAttribute('name');
+        $port = $configElement->getAttribute('port');
 
         // По задумке все дерективы "path" должны наследовать все дерективы родительского конфига
         // Однако радительский конфиг создается позже и уже должен содержать экземпляры конфигов path
         // Для решения этой проблемы создается временный конфиг, который будет передан в конфигуратор path
         $tempConfig = new HostConfig(
             $name,
+            $port ?: $parentConfig->port,
             $webroot ?? $parentConfig->webroot,
             $handler ?? $parentConfig->handler,
             $hosts ?: $parentConfig->hosts,
             $indexFiles ?: $parentConfig->indexFiles,
             [],
+            $tls ?? $parentConfig->tls,
         );
 
         foreach ($pathElements as $pathElement) {
@@ -115,11 +133,13 @@ class HostConfigParser
 
         return new HostConfig(
             $tempConfig->name,
+            $tempConfig->port,
             $tempConfig->webroot,
             $tempConfig->handler,
             $tempConfig->hosts,
             $tempConfig->indexFiles ,
             $paths,
+            $tempConfig->tls,
         );
     }
 
@@ -127,6 +147,10 @@ class HostConfigParser
     {
         $method = strtoupper($pathElement->getAttribute('method'));
         $protocol = strtoupper($pathElement->getAttribute('protocol'));
+
+        if ($pathElement->getElementsByTagName('tls')->length > 0) {
+            throw new RuntimeException('The tls directive is not supported in the path directive');
+        }
 
         return new PathHostConfig(
             $pathElement->getAttribute('name'),
@@ -149,5 +173,45 @@ class HostConfigParser
             HandlerConfigInterface::TYPE_REDIRECT => new RedirectHandlerConfig($to, $code),
             default => throw new RuntimeException("Handler '$type' is not supported"),
         };
+    }
+
+    private function createTLSConfig(DOMElement $tlsNode): TlsHostConfig
+    {
+        $certificate = null;
+        $privateKey = null;
+
+        foreach ($tlsNode->childNodes as $childNode) {
+            if (!$childNode instanceof DOMElement) {
+                continue;
+            }
+
+            $tagName = $childNode->tagName;
+
+            if ($tagName == 'certificate') {
+                if ($certificate) {
+                    throw new RuntimeException('The tls config must have only one certificate');
+                }
+
+                if (!file_exists($childNode->nodeValue) || !is_readable($childNode->nodeValue)) {
+                    throw new RuntimeException("Certificate file '$childNode->nodeValue' does not exist or is not readable");
+                }
+
+                $certificate = $childNode->nodeValue;
+            }
+
+            if ($tagName == 'privateKey') {
+                if ($privateKey) {
+                    throw new RuntimeException('The tls config must have only one privateKey');
+                }
+
+                if (!file_exists($childNode->nodeValue) || !is_readable($childNode->nodeValue)) {
+                    throw new RuntimeException("PrivateKey file '$childNode->nodeValue' does not exist or is not readable");
+                }
+
+                $privateKey = $childNode->nodeValue;
+            }
+        }
+
+        return new TlsHostConfig($certificate, $privateKey);
     }
 }
