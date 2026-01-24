@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning v2.0.0](http://semver.org/).
 
 ## [0.3.0] - 2026-01-24
 ### Added
+- Signal processing
 - HTTPS support
 - Support for multiple ports
 

@@ -11,6 +11,9 @@ class WebServer
 {
     private const int CRYPTO_METHOD = STREAM_CRYPTO_METHOD_TLSv1_2_SERVER | STREAM_CRYPTO_METHOD_TLSv1_3_SERVER;
 
+    protected int $processedRequests = 0;
+    protected bool $shutdown = false;
+
     public function __construct(
         private readonly HostConfigParser $hostConfigParser,
         private readonly HttpHandlerBus $httpHandlerBus,
@@ -63,6 +66,14 @@ class WebServer
 
     protected function run(array $sockets, array $hostConfigs): void
     {
+        $this->logger->info('Process started with PID: ' . getmypid());
+
+        pcntl_async_signals(true);
+
+        pcntl_signal(SIGTERM, fn() => $this->handleShutdown());
+        pcntl_signal(SIGINT, fn() => $this->handleShutdown());
+        pcntl_signal(SIGQUIT, fn() => $this->handleShutdown());
+
         $this->listen($sockets, $hostConfigs);
     }
 
@@ -70,7 +81,7 @@ class WebServer
     {
         $maxRequestSize = 1048576 * 16; // 16Mb
 
-        while (true) {
+        while (!$this->shutdown) {
             $read = $sockets;
             $write = null;
             $except = null;
@@ -91,6 +102,8 @@ class WebServer
                 if (!$connection) {
                     continue;
                 }
+
+                $this->processedRequests++;
 
                 $socketAddress = stream_socket_get_name($readSocket, false);
                 $port = explode(':', $socketAddress)[1];
@@ -152,9 +165,17 @@ class WebServer
 
                     fwrite($connection, $response);
                 } finally {
+                    $this->logger->debug("Requests processed: $this->processedRequests");
+
                     fclose($connection);
                 }
             }
         }
+    }
+
+    protected function handleShutdown(): void
+    {
+        $this->logger->info('Received shutdown signal, stopping server...');
+        $this->shutdown = true;
     }
 }
