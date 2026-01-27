@@ -3,6 +3,8 @@
 use Factory\HttpHandlerBusFactory;
 use Factory\HttpRequestFactory;
 use Factory\HttpResponseFactory;
+use Factory\SharedMemoryIpcFactory;
+use Factory\SocketPairIpcFactory;
 use Logger\LogLevel;
 use Logger\StdoutLogger;
 use Parser\HostConfigParser;
@@ -59,11 +61,23 @@ if ($model === 'prefork') {
     if (!extension_loaded('pcntl')) {
         throw new RuntimeException("PCNTL extension is required for prefork model");
     }
+
+    $ipc = strtolower(getopt('', ['ipc::'])['ipc'] ?? '') ?: (extension_loaded('shmop') ? 'shared_memory' : 'socket_pair');
+
+    $logger->debug("Selected IPC type: $ipc");
+
+    $ipcFactory = match ($ipc) {
+        'shared_memory' => new SharedMemoryIpcFactory(),
+        'socket_pair' => new SocketPairIpcFactory(),
+        default => throw new RuntimeException("Unknown IPC type '$ipc'"),
+    };
+} else {
+    $ipcFactory = null;
 }
 
 $server = match ($model) {
     'single' => new WebServer($logger, $hostConfigParser, $httpHandlerBus, $httpRequestFactory, $httpResponseFactory),
-    'prefork' => new PreForkWebServer($logger, $hostConfigParser, $httpHandlerBus, $httpRequestFactory, $httpResponseFactory),
+    'prefork' => new PreForkWebServer($logger, $hostConfigParser, $httpHandlerBus, $httpRequestFactory, $httpResponseFactory, $ipcFactory),
     default => throw new RuntimeException("Unknown server model '$model'"),
 };
 

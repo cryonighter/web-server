@@ -18,6 +18,7 @@ You need:
 - **PHP >= 8.4.0** but the latest stable version of PHP is recommended
 - **ext-dom**
 - **ext-openssl**
+- **ext-pcntl** (for prefork model)
 
 ## Install
 
@@ -33,9 +34,10 @@ $ git clone https://github.com/cryonighter/web-server
 $ php server.php 
 ```
 
-Доступны следующие параметры:
-- `--log-level` - Уровень логирования (по умолчанию: info)
-- `--model` - Модель работы сервер, доступны варианты: `single`, `prefork`
+The following parameters are available:
+- `--log-level` - Logging level; available options: `debug`, `info`, `notice`, `warning`, `error` (default: info)
+- `--model` - Server operation model; available options: `single`, `prefork`
+- `--ipc` - IPC operation model; available options: `shared_memory`, `socket_pair`
 
 ## Change log
 

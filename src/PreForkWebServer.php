@@ -1,11 +1,29 @@
 <?php
 
 use DTO\Worker\WorkerInfo;
+use Factory\HttpRequestFactory;
+use Factory\HttpResponseFactory;
+use Factory\IpcFactoryInterface;
+use Handler\HttpHandlerBus;
+use IPC\IpcInfo;
+use Logger\LoggerInterface;
+use Parser\HostConfigParser;
 
 class PreForkWebServer extends WebServer
 {
     private const int WORKER_COUNT = 4;
     private const int MAX_REQUESTS_PER_WORKER = 1000;
+
+    public function __construct(
+        LoggerInterface $logger,
+        HostConfigParser $hostConfigParser,
+        HttpHandlerBus $httpHandlerBus,
+        HttpRequestFactory $httpRequestFactory,
+        HttpResponseFactory $httpResponseFactory,
+        private readonly IpcFactoryInterface $ipcFactory,
+    ) {
+        parent::__construct($logger, $hostConfigParser, $httpHandlerBus, $httpRequestFactory, $httpResponseFactory);
+    }
 
     /**
      * @type  WorkerInfo[]
@@ -57,6 +75,21 @@ class PreForkWebServer extends WebServer
                     }
                 }
 
+                // Проверка сообщений от воркеров (пока просто чтобы было, позже придумаю назначение)
+                if (++$workerInfoIteration >= 50) { // Каждые 5 секунд
+                    foreach ($this->workers as $id => $workerInfo) {
+                        $ipcInfo = $workerInfo->ips->read();
+
+                        if ($ipcInfo) {
+                            $this->logger->debug("Worker #$id processed $ipcInfo->requests requests");
+                            $this->logger->debug("Worker #$id used $ipcInfo->memory bytes memory");
+                        } else {
+                            $this->logger->warning("Worker #$id didn't send any data");
+                        }
+                    }
+                    $workerInfoIteration = 0;
+                }
+
                 usleep(100000); // 0.1s
             }
         } catch (Throwable $exception) {
@@ -70,6 +103,8 @@ class PreForkWebServer extends WebServer
 
     private function fork(array $sockets, array $hostConfigs, int $id): void
     {
+        $ips = $this->ipcFactory->create($id, self::WORKER_COUNT);
+
         $pid = pcntl_fork();
 
         if ($pid === -1) {
@@ -77,6 +112,9 @@ class PreForkWebServer extends WebServer
         }
 
         if ($pid === 0) {
+            $ips->thisIsWorker();
+            $ips->write(IpcInfo::create($this->processedRequests));
+
             $this->logger->setWorkerId($id);
 
             $this->events->setEvent(
@@ -85,13 +123,21 @@ class PreForkWebServer extends WebServer
             );
 
             $this->events->setEvent(
+                WebServerEvents::LISTEN_LOOP_FINALLY,
+                function () use ($ips) {
+                    $ips->write(IpcInfo::create($this->processedRequests));
+                },
+            );
+
+            $this->events->setEvent(
                 WebServerEvents::LISTEN_END,
-                function () {
+                function () use ($ips) {
                     if ($this->shutdown) {
                         $this->logger->info('Stopped worker by signal from master');
                     } else {
                         $this->logger->info('Stopped worker by s reached max requests limit (' . self::MAX_REQUESTS_PER_WORKER . ')');
                     }
+                    $ips->close();
                 },
             );
 
@@ -100,7 +146,9 @@ class PreForkWebServer extends WebServer
             exit(0);
         }
 
-        $this->workers[$id] = new WorkerInfo($pid, time());
+        $ips->thisIsMaster();
+
+        $this->workers[$id] = new WorkerInfo($pid, $ips, time());
 
         $this->logger->info("Worker #$id spawned with PID: $pid");
     }
@@ -116,6 +164,8 @@ class PreForkWebServer extends WebServer
                 if (pcntl_waitpid($workerInfo->pid, $status, WNOHANG) > 0) {
                     $this->logger->info("Worker #$id stopped");
 
+                    $workerInfo->ips->close();
+
                     unset($this->workers[$id]);
                 }
             }
@@ -130,6 +180,8 @@ class PreForkWebServer extends WebServer
             pcntl_waitpid($workerInfo->pid, $status);
 
             $this->logger->info("Worker #$id killed");
+
+            $workerInfo->ips->close();
 
             unset($this->workers[$id]);
         }
