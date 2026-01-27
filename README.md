@@ -16,6 +16,7 @@ A simple web server written in PHP. Created as a pet project to improve understa
 You need:
 
 - **PHP >= 8.4.0** but the latest stable version of PHP is recommended
+- **ext-dom**
 - **ext-openssl**
 
 ## Install
@@ -31,6 +32,10 @@ $ git clone https://github.com/cryonighter/web-server
 ``` bash
 $ php server.php 
 ```
+
+Доступны следующие параметры:
+- `--log-level` - Уровень логирования (по умолчанию: info)
+- `--model` - Модель работы сервер, доступны варианты: `single`, `prefork`
 
 ## Change log
 

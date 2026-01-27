@@ -27,9 +27,10 @@ $logger = new StdoutLogger(
         'ERROR' => LogLevel::ERROR,
         'WARNING' => LogLevel::WARNING,
         'NOTICE' => LogLevel::NOTICE,
+        'INFO' => LogLevel::INFO,
         'DEBUG' => LogLevel::DEBUG,
         'TRACE' => LogLevel::TRACE,
-        default => LogLevel::INFO,
+        default => throw new RuntimeException('Unknown log level'),
     },
 );
 
@@ -46,5 +47,24 @@ $httpHandlerBus = new HttpHandlerBusFactory()->create(
     $logger,
 );
 
-$server = new WebServer($hostConfigParser, $httpHandlerBus, $httpRequestFactory, $httpResponseFactory, $logger);
+$model = strtolower(getopt('', ['model::'])['model'] ?? 'single');
+
+if (!in_array($model, ['single', 'prefork'])) {
+    throw new RuntimeException("Unknown server model '$model'");
+}
+
+$logger->debug("Selected server model: $model");
+
+if ($model === 'prefork') {
+    if (!extension_loaded('pcntl')) {
+        throw new RuntimeException("PCNTL extension is required for prefork model");
+    }
+}
+
+$server = match ($model) {
+    'single' => new WebServer($logger, $hostConfigParser, $httpHandlerBus, $httpRequestFactory, $httpResponseFactory),
+    'prefork' => new PreForkWebServer($logger, $hostConfigParser, $httpHandlerBus, $httpRequestFactory, $httpResponseFactory),
+    default => throw new RuntimeException("Unknown server model '$model'"),
+};
+
 $server->start();

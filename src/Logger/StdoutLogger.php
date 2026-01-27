@@ -4,7 +4,7 @@ namespace Logger;
 
 class StdoutLogger implements LoggerInterface
 {
-    public function __construct(private LogLevel $logLevel)
+    public function __construct(private LogLevel $logLevel, private string $workerId = '')
     {
     }
 
@@ -58,8 +58,17 @@ class StdoutLogger implements LoggerInterface
         $this->logLevel = $logLevel;
     }
 
+    public function setWorkerId(string $workerId): void
+    {
+        $this->workerId = $workerId;
+    }
+
     private function format(LogLevel $logLevel, string $message): string
     {
+        if ($this->workerId) {
+            return '[' . date('Y-m-d H:i:s') . '] [' . $logLevel->name . '] [Worker #' . $this->workerId . '] ' . $message;
+        }
+
         return '[' . date('Y-m-d H:i:s') . '] [' . $logLevel->name . '] ' . $message;
     }
 }

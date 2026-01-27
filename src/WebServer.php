@@ -11,16 +11,18 @@ class WebServer
 {
     private const int CRYPTO_METHOD = STREAM_CRYPTO_METHOD_TLSv1_2_SERVER | STREAM_CRYPTO_METHOD_TLSv1_3_SERVER;
 
+    protected readonly WebServerEvents $events;
     protected int $processedRequests = 0;
     protected bool $shutdown = false;
 
     public function __construct(
+        protected readonly LoggerInterface $logger,
         private readonly HostConfigParser $hostConfigParser,
         private readonly HttpHandlerBus $httpHandlerBus,
         private readonly HttpRequestFactory $httpRequestFactory,
         private readonly HttpResponseFactory $httpResponseFactory,
-        private readonly LoggerInterface $logger,
     ) {
+        $this->events = new WebServerEvents();
     }
 
     public function start(): void
@@ -31,7 +33,7 @@ class WebServer
         $sockets = [];
 
         foreach ($hostConfigs as $port => $config) {
-            $socket = stream_socket_server(
+            $socket = @stream_socket_server(
                 "tcp://$host:$port",
                 $errMsg,
                 $errorCode,
@@ -79,9 +81,11 @@ class WebServer
 
     protected function listen(array $sockets, array $hostConfigs): void
     {
+        $this->events->onListen();
+
         $maxRequestSize = 1048576 * 16; // 16Mb
 
-        while (!$this->shutdown) {
+        while (!$this->shutdown && $this->events->onListenLoop()) {
             $read = $sockets;
             $write = null;
             $except = null;
@@ -168,9 +172,13 @@ class WebServer
                     $this->logger->debug("Requests processed: $this->processedRequests");
 
                     fclose($connection);
+
+                    $this->events->onListenLoopFinally();
                 }
             }
         }
+
+        $this->events->onListenEnd();
     }
 
     protected function handleShutdown(): void
