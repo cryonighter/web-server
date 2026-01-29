@@ -139,26 +139,7 @@ class WebServer
                         }
                     }
 
-                    $content = '';
-                    $contentSize = 0;
-
-                    do {
-                        $chunk = fread($connection, 8192);
-                        $chunkSize = strlen($chunk);
-
-                        if ($content === '' && preg_match('/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/', substr($chunk, 0, 20))) {
-                            throw new RuntimeException('This is not the HTTP protocol');
-                        }
-
-                        $contentSize += $chunkSize;
-                        $content .= $chunk;
-
-                        if ($contentSize > $config->requestSizeMax) {
-                            throw HttpException::createFromCode(413);
-                        }
-                    } while ($chunkSize == 8192);
-
-                    $request = $this->httpRequestFactory->createFromContent($content);
+                    $request = $this->httpRequestFactory->createFromStream($connection, $config->requestSizeMax);
 
                     $this->logger->info("Request received: $request->startLine");
 

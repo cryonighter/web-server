@@ -12,6 +12,9 @@ This project adheres to [Semantic Versioning v2.0.0](http://semver.org/).
 - HTTPS support
 - Support for multiple ports
 
+### Fixed
+- Correct handling of the Content-Length header
+
 ## [0.2.0] - 2026-01-23
 ### Added
 - Hosts configuration using XML files

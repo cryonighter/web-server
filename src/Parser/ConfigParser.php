@@ -76,8 +76,6 @@ readonly class ConfigParser
 
             $tagName = $childNode->tagName;
 
-            var_dump($tagName);
-
             if ($tagName == 'workerCount') {
                 if ($workerCount) {
                     throw new RuntimeException('The prefork config must have only one workerCount');
