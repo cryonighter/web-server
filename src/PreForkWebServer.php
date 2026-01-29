@@ -1,5 +1,6 @@
 <?php
 
+use DTO\Config\GlobalConfig;
 use DTO\Worker\WorkerInfo;
 use Factory\HttpRequestFactory;
 use Factory\HttpResponseFactory;
@@ -7,30 +8,27 @@ use Factory\IpcFactoryInterface;
 use Handler\HttpHandlerBus;
 use IPC\IpcInfo;
 use Logger\LoggerInterface;
-use Parser\HostConfigParser;
+use Parser\ConfigParser;
 
 class PreForkWebServer extends WebServer
 {
-    private const int WORKER_COUNT = 4;
-    private const int MAX_REQUESTS_PER_WORKER = 1000;
+    /**
+     * @type WorkerInfo[]
+     */
+    private array $workers = [];
 
     public function __construct(
         LoggerInterface $logger,
-        HostConfigParser $hostConfigParser,
+        ConfigParser $configParser,
         HttpHandlerBus $httpHandlerBus,
         HttpRequestFactory $httpRequestFactory,
         HttpResponseFactory $httpResponseFactory,
         private readonly IpcFactoryInterface $ipcFactory,
     ) {
-        parent::__construct($logger, $hostConfigParser, $httpHandlerBus, $httpRequestFactory, $httpResponseFactory);
+        parent::__construct($logger, $configParser, $httpHandlerBus, $httpRequestFactory, $httpResponseFactory);
     }
 
-    /**
-     * @type  WorkerInfo[]
-     */
-    private array $workers = [];
-
-    protected function run(array $sockets, array $hostConfigs): void
+    protected function run(array $sockets, GlobalConfig $config): void
     {
         $this->logger->info('Master process started with PID: ' . getmypid());
 
@@ -39,11 +37,11 @@ class PreForkWebServer extends WebServer
         pcntl_signal(SIGTERM, fn() => $this->handleShutdown());
         pcntl_signal(SIGINT, fn() => $this->handleShutdown());
         pcntl_signal(SIGQUIT, fn() => $this->handleShutdown());
-        pcntl_signal(SIGCHLD, fn() => $this->handleWorkerExit($sockets, $hostConfigs));
+        pcntl_signal(SIGCHLD, fn() => $this->handleWorkerExit($sockets, $config));
 
         try {
-            for ($i = 1; $i <= self::WORKER_COUNT; $i++) {
-                $this->fork($sockets, $hostConfigs, $i);
+            for ($i = 1; $i <= $config->prefork->workerCount; $i++) {
+                $this->fork($sockets, $config, $i);
             }
 
             $this->logger->info('All workers spawned');
@@ -72,9 +70,9 @@ class PreForkWebServer extends WebServer
         }
     }
 
-    private function fork(array $sockets, array $hostConfigs, int $id): void
+    private function fork(array $sockets, GlobalConfig $config, int $id): void
     {
-        $ips = $this->ipcFactory->create($id, self::WORKER_COUNT);
+        $ips = $this->ipcFactory->create($id, $config->prefork->workerCount);
 
         $pid = pcntl_fork();
 
@@ -90,7 +88,7 @@ class PreForkWebServer extends WebServer
 
             $this->events->setEvent(
                 WebServerEvents::LISTEN_LOOP,
-                fn() => $this->processedRequests < self::MAX_REQUESTS_PER_WORKER,
+                fn() => $this->processedRequests < $config->prefork->workerRequestLimit,
             );
 
             $this->events->setEvent(
@@ -102,17 +100,17 @@ class PreForkWebServer extends WebServer
 
             $this->events->setEvent(
                 WebServerEvents::LISTEN_END,
-                function () use ($ips) {
+                function () use ($ips, $config) {
                     if ($this->shutdown) {
                         $this->logger->info('Stopped worker by signal from master');
                     } else {
-                        $this->logger->info('Stopped worker by reached max requests limit (' . self::MAX_REQUESTS_PER_WORKER . ')');
+                        $this->logger->info('Stopped worker by reached max requests limit (' . $config->prefork->workerRequestLimit . ')');
                     }
                     $ips->close();
                 },
             );
 
-            $this->listen($sockets, $hostConfigs);
+            $this->listen($sockets, $config);
 
             exit(0);
         }
@@ -159,7 +157,7 @@ class PreForkWebServer extends WebServer
         }
     }
 
-    private function handleWorkerExit(array $sockets, array $hostConfigs): void
+    private function handleWorkerExit(array $sockets, GlobalConfig $config): void
     {
         // Обрабатываем все завершившиеся процессы
         while (($pid = pcntl_waitpid(-1, $status, WNOHANG)) > 0) {
@@ -187,7 +185,7 @@ class PreForkWebServer extends WebServer
 
             if (!$this->shutdown) {
                 $this->logger->info("Respawning worker #$workerId");
-                $this->fork($sockets, $hostConfigs, $workerId);
+                $this->fork($sockets, $config, $workerId);
             }
         }
     }

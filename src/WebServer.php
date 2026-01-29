@@ -1,23 +1,25 @@
 <?php
 
+use DTO\Config\GlobalConfig;
 use Exception\HttpException;
 use Factory\HttpRequestFactory;
 use Factory\HttpResponseFactory;
 use Handler\HttpHandlerBus;
 use Logger\LoggerInterface;
-use Parser\HostConfigParser;
+use Parser\ConfigParser;
 
 class WebServer
 {
     private const int CRYPTO_METHOD = STREAM_CRYPTO_METHOD_TLSv1_2_SERVER | STREAM_CRYPTO_METHOD_TLSv1_3_SERVER;
 
     protected readonly WebServerEvents $events;
+
     protected int $processedRequests = 0;
     protected bool $shutdown = false;
 
     public function __construct(
         protected readonly LoggerInterface $logger,
-        private readonly HostConfigParser $hostConfigParser,
+        private readonly ConfigParser $configParser,
         private readonly HttpHandlerBus $httpHandlerBus,
         private readonly HttpRequestFactory $httpRequestFactory,
         private readonly HttpResponseFactory $httpResponseFactory,
@@ -27,12 +29,12 @@ class WebServer
 
     public function start(): void
     {
-        $hostConfigs = $this->hostConfigParser->createAll();
+        $config = $this->configParser->create();
 
         $host = '0.0.0.0';
         $sockets = [];
 
-        foreach ($hostConfigs as $port => $config) {
+        foreach ($config->hosts as $port => $hostConfig) {
             $context = [
                 'socket' => [
                     'backlog' => 256,
@@ -40,10 +42,10 @@ class WebServer
                 ],
             ];
 
-            if ($config->tls) {
+            if ($hostConfig->tls) {
                 $context['ssl'] = [
-                    'local_cert' => $config->tls->certificate,
-                    'local_pk' => $config->tls->privateKey,
+                    'local_cert' => $hostConfig->tls->certificate,
+                    'local_pk' => $hostConfig->tls->privateKey,
                     'verify_peer' => false,
                     'verify_peer_name' => false,
                     'allow_self_signed' => true,
@@ -67,15 +69,15 @@ class WebServer
 
             $sockets[] = $socket;
 
-            $protocol = $config->tls ? 'https' : 'http';
+            $protocol = $hostConfig->tls ? 'https' : 'http';
 
             $this->logger->info("Server running on $protocol://$host:$port");
         }
 
-        $this->run($sockets, $hostConfigs);
+        $this->run($sockets, $config);
     }
 
-    protected function run(array $sockets, array $hostConfigs): void
+    protected function run(array $sockets, GlobalConfig $config): void
     {
         $this->logger->info('Process started with PID: ' . getmypid());
 
@@ -85,14 +87,12 @@ class WebServer
         pcntl_signal(SIGINT, fn() => $this->handleShutdown());
         pcntl_signal(SIGQUIT, fn() => $this->handleShutdown());
 
-        $this->listen($sockets, $hostConfigs);
+        $this->listen($sockets, $config);
     }
 
-    protected function listen(array $sockets, array $hostConfigs): void
+    protected function listen(array $sockets, GlobalConfig $config): void
     {
         $this->events->onListen();
-
-        $maxRequestSize = 1048576 * 16; // 16Mb
 
         while (!$this->shutdown && $this->events->onListenLoop()) {
             $read = $sockets;
@@ -121,7 +121,9 @@ class WebServer
                 $socketAddress = stream_socket_get_name($readSocket, false);
                 $port = explode(':', $socketAddress)[1];
 
-                $isTLS = (bool) $hostConfigs[$port]->tls;
+                $hostConfig = $config->hosts[$port];
+
+                $isTLS = (bool) $hostConfig->tls;
                 $protocol = $isTLS ? 'HTTPS' : 'HTTP';
 
                 $remoteAddress = stream_socket_get_name($connection, true);
@@ -151,7 +153,7 @@ class WebServer
                         $contentSize += $chunkSize;
                         $content .= $chunk;
 
-                        if ($contentSize > $maxRequestSize) {
+                        if ($contentSize > $config->requestSizeMax) {
                             throw HttpException::createFromCode(413);
                         }
                     } while ($chunkSize == 8192);
@@ -160,7 +162,7 @@ class WebServer
 
                     $this->logger->info("Request received: $request->startLine");
 
-                    $response = $this->httpHandlerBus->handle($request, $hostConfigs[$port]);
+                    $response = $this->httpHandlerBus->handle($request, $hostConfig);
 
                     foreach ($response->read(1048576) as $chunk) {
                         fwrite($connection, $chunk);

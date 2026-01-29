@@ -32,15 +32,12 @@ class HostConfigParser
     /**
      * @return HostConfig[]
      */
-    public function createAll(): array
+    public function createAll(string $pathConfig): array
     {
-        $pathConfig = './config';
-        $pathConfigHosts = "$pathConfig/hosts";
-
         $configs = [];
 
-        foreach (scandir($pathConfigHosts) as $name) {
-            $file = "$pathConfigHosts/$name";
+        foreach (scandir($pathConfig) as $name) {
+            $file = "$pathConfig/$name";
 
             if (!is_file($file) || !str_ends_with($file, '.xml')) {
                 continue;

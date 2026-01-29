@@ -7,6 +7,7 @@ use Factory\SharedMemoryIpcFactory;
 use Factory\SocketPairIpcFactory;
 use Logger\LogLevel;
 use Logger\StdoutLogger;
+use Parser\ConfigParser;
 use Parser\HostConfigParser;
 use Parser\HttpParser;
 use Router\HttpRouter;
@@ -37,7 +38,7 @@ $logger = new StdoutLogger(
 );
 
 $httpParser = new HttpParser();
-$hostConfigParser = new HostConfigParser();
+$configParser = new ConfigParser(new HostConfigParser(), './config');
 
 $httpRequestFactory = new HttpRequestFactory($httpParser);
 $httpResponseFactory = new HttpResponseFactory($httpParser);
@@ -76,8 +77,8 @@ if ($model === 'prefork') {
 }
 
 $server = match ($model) {
-    'single' => new WebServer($logger, $hostConfigParser, $httpHandlerBus, $httpRequestFactory, $httpResponseFactory),
-    'prefork' => new PreForkWebServer($logger, $hostConfigParser, $httpHandlerBus, $httpRequestFactory, $httpResponseFactory, $ipcFactory),
+    'single' => new WebServer($logger, $configParser, $httpHandlerBus, $httpRequestFactory, $httpResponseFactory),
+    'prefork' => new PreForkWebServer($logger, $configParser, $httpHandlerBus, $httpRequestFactory, $httpResponseFactory, $ipcFactory),
     default => throw new RuntimeException("Unknown server model '$model'"),
 };
 

@@ -3,6 +3,7 @@
 A simple web server written in PHP. Created as a pet project to improve understanding of web servers and server protocols.
 
 ## Documentation
+- [Global Configuration](docs/configuration-global.md)
 - [Hosts Configuration](docs/configuration-hosts.md)
 
 ## Highlights
@@ -18,6 +19,9 @@ You need:
 - **PHP >= 8.4.0** but the latest stable version of PHP is recommended
 - **ext-dom**
 - **ext-openssl**
+
+Suggested:
+
 - **ext-pcntl** (for prefork model)
 
 ## Install
@@ -38,6 +42,10 @@ The following parameters are available:
 - `--log-level` - Logging level; available options: `debug`, `info`, `notice`, `warning`, `error` (default: info)
 - `--model` - Server operation model; available options: `single`, `prefork`
 - `--ipc` - IPC operation model; available options: `shared_memory`, `socket_pair`
+
+``` bash
+$ php server.php --log-level=debug --model=prefork --ipc=shared_memory
+```
 
 ## Change log
 

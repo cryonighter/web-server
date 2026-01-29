@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<global>
+    <requestSizeMax>16777216</requestSizeMax>
+
+    <prefork>
+        <workerCount>4</workerCount>
+        <workerRequestLimit>1000</workerRequestLimit>
+    </prefork>
+</global>
