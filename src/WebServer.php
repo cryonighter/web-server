@@ -1,6 +1,7 @@
 <?php
 
 use DTO\Config\GlobalConfig;
+use Exception\EncryptionSocketException;
 use Exception\HttpException;
 use Factory\HttpRequestFactory;
 use Factory\HttpResponseFactory;
@@ -52,6 +53,7 @@ class WebServer
                     'disable_compression' => true,
                     'SNI_enabled' => true,
                     'crypto_method' => self::CRYPTO_METHOD,
+                    'security_level' => $hostConfig->tls->securityLevel,
                 ];
             }
 
@@ -133,9 +135,16 @@ class WebServer
                 try {
                     if ($isTLS) {
                         stream_set_blocking($connection, true);
+                        stream_set_timeout($connection, 5);
 
                         if (!@stream_socket_enable_crypto($connection, true, self::CRYPTO_METHOD)) {
-                            throw new RuntimeException('Failed to enable SSL/TLS encryption');
+                            $lastError = error_get_last()['message'] ?? '';
+
+                            preg_match('/OpenSSL Error messages:(.+?)$/s', $lastError, $matches);
+
+                            $errorMessage = ($matches[1] ?? null) ? trim($matches[1]) : 'Unknown SSL/TLS error';
+
+                            throw new EncryptionSocketException("Failed to enable SSL/TLS encryption: $errorMessage");
                         }
                     }
 
@@ -150,6 +159,8 @@ class WebServer
                     }
 
                     $this->logger->info("Response sent: $response->protocol $response->code $response->message");
+                } catch (EncryptionSocketException $exception) {
+                    $this->logger->info($exception->getMessage());
                 } catch (Throwable $exception) {
                     if (!$exception instanceof HttpException || !$exception->is4xx()) {
                         $this->logger->error($exception);

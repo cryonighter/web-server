@@ -104,10 +104,16 @@
 <tls>
    <certificate>./cert/server.crt</certificate>
    <privateKey>./cert/server.key</privateKey>
+   <securityLevel>2</securityLevel>
 </tls>
 ```
 
 **По умолчанию:** отсутствует.
+
+Состоит из нескольких поддиректив:
+`<certificate>` - Путь к файлу сертификата.
+`<privateKey>` - Путь к файлу закрытого ключа.
+`<securityLevel>` - Уровень безопасности OpenSSL. Допустимые значения: 0, 1, 2, 3, 4, 5. По умолчанию: 2.
 
 ## Элемент `<path>` - маршрутизация запросов
 

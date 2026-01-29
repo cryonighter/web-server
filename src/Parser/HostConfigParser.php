@@ -176,6 +176,7 @@ class HostConfigParser
     {
         $certificate = null;
         $privateKey = null;
+        $securityLevel = null;
 
         foreach ($tlsNode->childNodes as $childNode) {
             if (!$childNode instanceof DOMElement) {
@@ -207,8 +208,24 @@ class HostConfigParser
 
                 $privateKey = $childNode->nodeValue;
             }
+
+            if ($tagName == 'securityLevel') {
+                if ($securityLevel) {
+                    throw new RuntimeException('The tls config must have only one privateKey');
+                }
+
+                if (!in_array($childNode->nodeValue, [0, 1, 2, 3, 4, 5])) {
+                    throw new RuntimeException("Security level '$childNode->nodeValue' is not supported");
+                }
+
+                $securityLevel = $childNode->nodeValue;
+            }
         }
 
-        return new TlsHostConfig($certificate, $privateKey);
+        return new TlsHostConfig(
+            $certificate ?? throw new RuntimeException('The tls config must have certificate'),
+            $privateKey ?? throw new RuntimeException('The tls config must have privateKey'),
+            $securityLevel ?? 2,
+        );
     }
 }
