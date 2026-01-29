@@ -35,7 +35,7 @@ readonly class ConfigParser
 
     private function createGlobalConfig(DOMElement $configElement): GlobalConfig
     {
-        $requestSizeMax = 16777216;
+        $requestSizeMax = null;
         $prefork = null;
 
         foreach ($configElement->childNodes as $childNode) {
@@ -58,7 +58,7 @@ readonly class ConfigParser
         }
 
         return new GlobalConfig(
-            $requestSizeMax,
+            $requestSizeMax ?? 16777216,
             $prefork,
             $this->hostConfigParser->createAll("$this->pathConfig/hosts"),
         );
@@ -66,8 +66,8 @@ readonly class ConfigParser
 
     private function createPreforkConfig(DOMElement $preforkNode): PreforkConfig
     {
-        $workerCount = 4;
-        $workerRequestLimit = 1000;
+        $workerCount = null;
+        $workerRequestLimit = null;
 
         foreach ($preforkNode->childNodes as $childNode) {
             if (!$childNode instanceof DOMElement) {
@@ -75,6 +75,8 @@ readonly class ConfigParser
             }
 
             $tagName = $childNode->tagName;
+
+            var_dump($tagName);
 
             if ($tagName == 'workerCount') {
                 if ($workerCount) {
@@ -93,6 +95,9 @@ readonly class ConfigParser
             }
         }
 
-        return new PreforkConfig($workerCount, $workerRequestLimit);
+        return new PreforkConfig(
+            $workerCount ?? 4,
+            $workerRequestLimit ?? 1000,
+        );
     }
 }
