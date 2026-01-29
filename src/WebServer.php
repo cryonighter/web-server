@@ -33,23 +33,32 @@ class WebServer
         $sockets = [];
 
         foreach ($hostConfigs as $port => $config) {
+            $context = [
+                'socket' => [
+                    'backlog' => 256,
+                    'so_reuseport' => 1,
+                ],
+            ];
+
+            if ($config->tls) {
+                $context['ssl'] = [
+                    'local_cert' => $config->tls->certificate,
+                    'local_pk' => $config->tls->privateKey,
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => true,
+                    'disable_compression' => true,
+                    'SNI_enabled' => true,
+                    'crypto_method' => self::CRYPTO_METHOD,
+                ];
+            }
+
             $socket = @stream_socket_server(
                 "tcp://$host:$port",
                 $errMsg,
                 $errorCode,
                 STREAM_SERVER_BIND | STREAM_SERVER_LISTEN,
-                $config->tls ? stream_context_create([
-                    'ssl' => [
-                        'local_cert' => $config->tls->certificate,
-                        'local_pk' => $config->tls->privateKey,
-                        'verify_peer' => false,
-                        'verify_peer_name' => false,
-                        'allow_self_signed' => true,
-                        'disable_compression' => true,
-                        'SNI_enabled' => true,
-                        'crypto_method' => self::CRYPTO_METHOD,
-                    ],
-                ]) : null,
+                stream_context_create($context),
             );
 
             if (!$socket) {
