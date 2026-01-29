@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<config name="secure" port="8443">
+    <webroot>./webroot</webroot>
+
+    <indexFile>index.html</indexFile>
+    <indexFile>index.htm</indexFile>
+
+    <tls>
+        <certificate>./cert/server.crt</certificate>
+        <privateKey>./cert/server.key</privateKey>
+    </tls>
+
+    <path name="hello-redirect" regexp="hello(\?|$)" method="GET" protocol="HTTP">
+        <handler type="redirect" to="/hello-world.php" code="301" />
+    </path>
+
+    <path name="php" regexp="\.php(\?|$)">
+        <path name="phpinfo" regexp="phpinfo.php(\?|$)" method="GET">
+            <webroot>./</webroot>
+            <handler type="file" />
+        </path>
+
+        <handler type="forward" to="http://localhost:8081/webroot/" />
+    </path>
+</config>
