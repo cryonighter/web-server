@@ -53,8 +53,10 @@ Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed re
 
 ## Testing
 
+The project does not use composer and does not contain its own copy of PHPUnit, so PHPUnit must be installed globally.
+
 ``` bash
-$ php vendor/phpunit/phpunit/phpunit tests
+$ phpunit tests 
 ```
 
 ## Security
