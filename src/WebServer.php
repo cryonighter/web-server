@@ -132,10 +132,11 @@ class WebServer
 
                 $this->logger->info("New $protocol connection accepted from $remoteAddress");
 
+                stream_set_timeout($connection, 5);
+
                 try {
                     if ($isTLS) {
                         stream_set_blocking($connection, true);
-                        stream_set_timeout($connection, 5);
 
                         if (!@stream_socket_enable_crypto($connection, true, self::CRYPTO_METHOD)) {
                             $lastError = error_get_last()['message'] ?? '';

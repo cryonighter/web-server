@@ -56,11 +56,7 @@ readonly class HttpRequestFactory
             throw HttpException::createFromCode(414);
         }
 
-        $startLineData = array_map(trim(...), preg_split('/ +/', $startLine));
-
-        if (count($startLineData) < 3) {
-            throw new RuntimeException('Invalid headers content');
-        }
+        [$method, $path, $protocol] = $this->parser->parseStartLine($startLine);
 
         $headers = [];
 
@@ -82,10 +78,7 @@ readonly class HttpRequestFactory
                 break;
             }
 
-            $result = explode(':', $header, 2);
-
-            $name = trim($result[0]);
-            $value = trim($result[1] ?? '');
+            [$name, $value] = $this->parser->parseHeaderLine($header);
 
             if (!isset($headers[$name])) {
                 $headers[$name] = [];
@@ -111,6 +104,6 @@ readonly class HttpRequestFactory
             $contentSize += $chunkSize;
         }
 
-        return $this->create($startLineData[0], $startLineData[1], $startLineData[2], $headers, $content);
+        return $this->create($method, $path, $protocol, $headers, $content);
     }
 }

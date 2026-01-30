@@ -17,20 +17,30 @@ class HttpParser
             throw new RuntimeException('Empty http request headers');
         }
 
-        $firstHeader = $this->parseFirstHeader(array_shift($headers));
+        $firstHeader = $this->parseStartLine(array_shift($headers));
 
         return [$firstHeader, $this->parseOtherHeaders($headers), $body];
     }
 
-    public function parseFirstHeader(string $row): array
+    public function parseStartLine(string $startLine): array
     {
-        $firstHeader = preg_split('/ +/', $row);
+        $startLineData = preg_split('/ +/', $startLine);
 
-        if (count($firstHeader) < 3) {
-            throw new RuntimeException('Invalid headers content');
+        if (count($startLineData) < 3) {
+            throw new RuntimeException('Invalid start line');
         }
 
-        return $firstHeader;
+        return array_map(trim(...), $startLineData);
+    }
+
+    public function parseHeaderLine(string $header): array
+    {
+        $result = explode(':', $header, 2);
+
+        $name = mb_convert_case(trim($result[0]), MB_CASE_TITLE, 'UTF-8');
+        $value = trim($result[1] ?? '');
+
+        return [$name, $value];
     }
 
     private function parseOtherHeaders(array $rows): array
@@ -38,10 +48,7 @@ class HttpParser
         $headers = [];
 
         foreach ($rows as $row) {
-            $result = explode(':', $row, 2);
-
-            $name = trim($result[0]);
-            $value = trim($result[1] ?? '');
+            [$name, $value] = $this->parseHeaderLine($row);
 
             if (!isset($headers[$name])) {
                 $headers[$name] = [];
@@ -49,8 +56,6 @@ class HttpParser
 
             $headers[$name][] = $value;
         }
-
-        ksort($headers);
 
         return $headers;
     }
