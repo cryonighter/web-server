@@ -4,7 +4,8 @@ namespace DTO;
 
 class HttpRequest
 {
-    private array $query = [];
+    private(set) string $queryString = '';
+    private(set) array $query = [];
 
     public string $startLine {
         get => "$this->method $this->path $this->protocol";
@@ -18,7 +19,8 @@ class HttpRequest
         public readonly string $body,
         public readonly string $source,
     ) {
-        parse_str(parse_url($path)['query'] ?? '', $this->query);
+        $this->queryString = parse_url($path)['query'] ?? '';
+        parse_str($this->queryString, $this->query);
     }
 
     public function getPathWithoutQuery(): string
@@ -29,11 +31,6 @@ class HttpRequest
     public function getHost(): ?string
     {
         return current($this->headers['Host'] ?? []) ?: null;
-    }
-
-    public function getQuery(): array
-    {
-        return $this->query;
     }
 
     public function __toString(): string

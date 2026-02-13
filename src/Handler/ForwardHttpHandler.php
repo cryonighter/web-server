@@ -39,7 +39,7 @@ readonly class ForwardHttpHandler
             $path = $request->getPathWithoutQuery();
         }
 
-        $mergedQuery = http_build_query(array_merge($request->getQuery(), $query));
+        $mergedQuery = http_build_query(array_merge($request->query, $query));
 
         if ($mergedQuery) {
             $path .= '?' . $mergedQuery;
@@ -72,7 +72,7 @@ readonly class ForwardHttpHandler
 
         fwrite($socket, $this->prepareForwardingRequest($request, $host, $path));
 
-        [$firstHeader, $otherHeaders] = $this->parser->parse($this->readHeadersFromSocket($socket));
+        [$firstHeader, $otherHeaders] = $this->parser->parseContent($this->readHeadersFromSocket($socket));
 
         return $this->httpResponseFactory->create(
             $firstHeader[0],

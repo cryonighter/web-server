@@ -3,7 +3,7 @@
 namespace Factory;
 
 use DTO\Config\HandlerConfig\HandlerConfigInterface;
-use DTO\Config\HostConfig;
+use Handler\CgiHttpHandler;
 use Handler\FileHttpHandler;
 use Handler\ForwardHttpHandler;
 use Handler\HttpHandlerBus;
@@ -23,6 +23,7 @@ readonly class HttpHandlerBusFactory
         return new HttpHandlerBus(
             $httpRouter,
             [
+                HandlerConfigInterface::TYPE_CGI => new CgiHttpHandler($httpResponseFactory, $httpParser, new CgiEnvFactory()),
                 HandlerConfigInterface::TYPE_FILE => new FileHttpHandler($httpResponseFactory),
                 HandlerConfigInterface::TYPE_REDIRECT => new RedirectHttpHandler($httpResponseFactory),
                 HandlerConfigInterface::TYPE_FORWARD => new ForwardHttpHandler($httpResponseFactory, $httpParser, $logger),

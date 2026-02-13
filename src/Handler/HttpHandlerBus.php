@@ -2,11 +2,13 @@
 
 namespace Handler;
 
+use DTO\Config\HandlerConfig\CgiHandlerConfig;
 use DTO\Config\HandlerConfig\FileHandlerConfig;
 use DTO\Config\HandlerConfig\ForwardHandlerConfig;
 use DTO\Config\HandlerConfig\HandlerConfigInterface;
 use DTO\Config\HandlerConfig\RedirectHandlerConfig;
 use DTO\Config\HostConfig;
+use DTO\HttpContext;
 use DTO\HttpRequest;
 use DTO\HttpResponse;
 use Exception\HttpException;
@@ -23,14 +25,21 @@ readonly class HttpHandlerBus
     /**
      * @throws HttpException
      */
-    public function handle(HttpRequest $request, HostConfig $rootHostConfig): HttpResponse
+    public function handle(HttpRequest $request, HttpContext $context, HostConfig $rootHostConfig): HttpResponse
     {
         $hostConfig = $this->router->getRouteConfig($request, $rootHostConfig);
         $handlerConfig = $hostConfig->handler;
 
+        if ($handlerConfig instanceof CgiHandlerConfig) {
+            /** @var CgiHttpHandler $handler */
+            $handler = $this->handlers[HandlerConfigInterface::TYPE_CGI] ?? throw new HttpException(500);
+
+            return $handler->handle($request, $context, $hostConfig->webroot, $handlerConfig->executable);
+        }
+
         if ($handlerConfig instanceof FileHandlerConfig) {
             /** @var FileHttpHandler $handler */
-            $handler = $this->handlers[HandlerConfigInterface::TYPE_FILE] ?? throw new HttpException(500);
+            $handler = $this->handlers[HandlerConfigInterface::TYPE_FILE] ?? throw new HttpException(500); // TODO !!!
 
             return $handler->handle($request, $hostConfig->webroot, $hostConfig->indexFiles);
         }

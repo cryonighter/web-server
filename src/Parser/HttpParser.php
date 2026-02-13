@@ -6,7 +6,7 @@ use RuntimeException;
 
 class HttpParser
 {
-    public function parse(string $content): array
+    public function parseContent(string $content): array
     {
         $blocks = preg_split('/\r?\n\r?\n/', $content, 2);
 
@@ -19,7 +19,7 @@ class HttpParser
 
         $firstHeader = $this->parseStartLine(array_shift($headers));
 
-        return [$firstHeader, $this->parseOtherHeaders($headers), $body];
+        return [$firstHeader, $this->parseHeaders($headers), $body];
     }
 
     public function parseStartLine(string $startLine): array
@@ -43,7 +43,7 @@ class HttpParser
         return [$name, $value];
     }
 
-    private function parseOtherHeaders(array $rows): array
+    public function parseHeaders(array $rows): array
     {
         $headers = [];
 

@@ -20,6 +20,6 @@
             <handler type="file" />
         </path>
 
-        <handler type="forward" to="http://localhost:8081/webroot/" />
+        <handler type="cgi" executable="php-cgi" />
     </path>
 </config>

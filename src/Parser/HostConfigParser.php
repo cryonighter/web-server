@@ -4,6 +4,7 @@ namespace Parser;
 
 use DOMDocument;
 use DOMElement;
+use DTO\Config\HandlerConfig\CgiHandlerConfig;
 use DTO\Config\HandlerConfig\FileHandlerConfig;
 use DTO\Config\HandlerConfig\ForwardHandlerConfig;
 use DTO\Config\HandlerConfig\HandlerConfigInterface;
@@ -163,8 +164,10 @@ class HostConfigParser
         $type = $handlerElement->getAttribute('type');
         $to = $handlerElement->getAttribute('to');
         $code = $handlerElement->getAttribute('code') ?: 302;
+        $executable = $handlerElement->getAttribute('executable');
 
         return match ($type) {
+            HandlerConfigInterface::TYPE_CGI => new CgiHandlerConfig($executable),
             HandlerConfigInterface::TYPE_FILE => new FileHandlerConfig(),
             HandlerConfigInterface::TYPE_FORWARD => new ForwardHandlerConfig($to),
             HandlerConfigInterface::TYPE_REDIRECT => new RedirectHandlerConfig($to, $code),

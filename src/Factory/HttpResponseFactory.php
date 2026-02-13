@@ -26,7 +26,7 @@ readonly class HttpResponseFactory
 
     public function createFromContent(string $content): HttpResponse
     {
-        [$firstHeader, $otherHeaders, $body] = $this->parser->parse($content);
+        [$firstHeader, $otherHeaders, $body] = $this->parser->parseContent($content);
 
         if ($body && empty($otherHeaders['Content-Length'])) {
             $otherHeaders['Content-Length'] = [strlen($body)];

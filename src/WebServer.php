@@ -1,6 +1,7 @@
 <?php
 
 use DTO\Config\GlobalConfig;
+use DTO\HttpContext;
 use Exception\EncryptionSocketException;
 use Exception\HttpException;
 use Factory\HttpRequestFactory;
@@ -118,10 +119,12 @@ class WebServer
                     continue;
                 }
 
+                $acceptTime = microtime(true);
+
                 $this->processedRequests++;
 
-                $socketAddress = stream_socket_get_name($readSocket, false);
-                $port = explode(':', $socketAddress)[1];
+                $socketAddress = stream_socket_get_name($connection, false);
+                [$address, $port] = explode(':', $socketAddress);
 
                 $hostConfig = $config->hosts[$port];
 
@@ -129,6 +132,7 @@ class WebServer
                 $protocol = $isTLS ? 'HTTPS' : 'HTTP';
 
                 $remoteAddress = stream_socket_get_name($connection, true);
+                $remote = explode(':', $remoteAddress);
 
                 $this->logger->info("New $protocol connection accepted from $remoteAddress");
 
@@ -153,7 +157,9 @@ class WebServer
 
                     $this->logger->info("Request received: $request->startLine");
 
-                    $response = $this->httpHandlerBus->handle($request, $hostConfig);
+                    $context = new HttpContext($acceptTime, $address, $port, $remote[0], $remote[1], $protocol);
+
+                    $response = $this->httpHandlerBus->handle($request, $context, $hostConfig);
 
                     foreach ($response->read(1048576) as $chunk) {
                         fwrite($connection, $chunk);

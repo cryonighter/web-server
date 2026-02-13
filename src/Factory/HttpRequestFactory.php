@@ -26,7 +26,7 @@ readonly class HttpRequestFactory
 
     public function createFromContent(string $content): HttpRequest
     {
-        [$firstHeader, $otherHeaders, $body] = $this->parser->parse($content);
+        [$firstHeader, $otherHeaders, $body] = $this->parser->parseContent($content);
 
         return $this->create(
             $firstHeader[0],
