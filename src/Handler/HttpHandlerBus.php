@@ -53,7 +53,7 @@ readonly class HttpHandlerBus
             $handler = $this->handlers[HandlerConfigInterface::TYPE_FORWARD]
                 ?? throw HandlerNotFoundException::fromType(HandlerConfigInterface::TYPE_FORWARD);
 
-            return $handler->handle($request, $handlerConfig->to);
+            return $handler->handle($request, $context, $handlerConfig->to);
         }
 
         if ($handlerConfig instanceof RedirectHandlerConfig) {

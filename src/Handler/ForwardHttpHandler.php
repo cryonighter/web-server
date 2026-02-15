@@ -2,6 +2,7 @@
 
 namespace Handler;
 
+use DTO\HttpContext;
 use DTO\HttpRequest;
 use DTO\HttpResponse;
 use DTO\StreamBody\StreamBody;
@@ -22,7 +23,7 @@ readonly class ForwardHttpHandler
     /**
      * @throws HttpException
      */
-    public function handle(HttpRequest $request, string $to): HttpResponse
+    public function handle(HttpRequest $request, HttpContext $context, string $to): HttpResponse
     {
         $url = parse_url($to);
 
@@ -70,7 +71,7 @@ readonly class ForwardHttpHandler
 
         $this->logger->debug("Forwarding request to $address$path");
 
-        fwrite($socket, $this->prepareForwardingRequest($request, $host, $path));
+        fwrite($socket, $this->prepareForwardingRequest($request, $context, $host, $path));
 
         [$firstHeader, $otherHeaders] = $this->parser->parseContent($this->readHeadersFromSocket($socket));
 
@@ -83,12 +84,12 @@ readonly class ForwardHttpHandler
         );
     }
 
-    private function prepareForwardingRequest(HttpRequest $request, string $host, string $path): string
+    private function prepareForwardingRequest(HttpRequest $request, HttpContext $context, string $host, string $path): string
     {
         $headers = [];
 
         foreach ($request->headers as $key => $values) {
-            if ($key === 'Host') {
+            if (in_array($key, ['Host', 'X-Forwarded-For'])) {
                 continue;
             }
             foreach ($values as $value) {
@@ -98,6 +99,12 @@ readonly class ForwardHttpHandler
 
         $headers[] = "Host: $host";
         $headers[] = "Connection: close";
+
+        if (isset($request->headers['X-Forwarded-For'][0])) {
+            $headers[] = "X-Forwarded-For: {$request->headers['X-Forwarded-For'][0]}, $context->remoteAddress";
+        } else {
+            $headers[] = "X-Forwarded-For: $context->remoteAddress";
+        }
 
         return "$request->method $path $request->protocol\r\n" . implode("\r\n", $headers) . "\r\n\r\n$request->body";
     }
