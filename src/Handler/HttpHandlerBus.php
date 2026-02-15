@@ -27,7 +27,7 @@ readonly class HttpHandlerBus
      */
     public function handle(HttpRequest $request, HttpContext $context, HostConfig $rootHostConfig): HttpResponse
     {
-        $hostConfig = $this->router->getRouteConfig($request, $rootHostConfig);
+        $hostConfig = $this->router->getRouteConfig($request, $context, $rootHostConfig);
         $handlerConfig = $hostConfig->handler;
 
         if ($handlerConfig instanceof CgiHandlerConfig) {

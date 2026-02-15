@@ -3,6 +3,7 @@
 namespace Router;
 
 use DTO\Config\HostConfig;
+use DTO\HttpContext;
 use DTO\HttpRequest;
 use Exception\HttpException;
 use Logger\LoggerInterface;
@@ -16,7 +17,7 @@ readonly class HttpRouter
     /**
      * @throws HttpException
      */
-    public function getRouteConfig(HttpRequest $request, HostConfig $hostConfig): HostConfig
+    public function getRouteConfig(HttpRequest $request, HttpContext $context, HostConfig $hostConfig): HostConfig
     {
         $this->logger->debug("Processing request for host {$request->getHost()}");
 
@@ -39,15 +40,14 @@ readonly class HttpRouter
                 continue;
             }
 
-            // TODO: Протокол тут не подходит
-//                if ($path->protocol && !in_array($request->protocol, $path->protocol)) {
-//                    $this->logger->debug("Protocol not matched");
-//                    continue;
-//                }
+            if ($path->protocol && !in_array($context->protocol, $path->protocol)) {
+                $this->logger->debug("Protocol not matched");
+                continue;
+            }
 
             $this->logger->debug("Path matched");
 
-            return $this->getRouteConfig($request, $path->hostConfig);
+            return $this->getRouteConfig($request, $context, $path->hostConfig);
         }
 
         $this->logger->debug("Not found config for paths, returning host config: $hostConfig->name");
