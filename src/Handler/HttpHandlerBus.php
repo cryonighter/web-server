@@ -11,8 +11,10 @@ use DTO\Config\HostConfig;
 use DTO\HttpContext;
 use DTO\HttpRequest;
 use DTO\HttpResponse;
+use Exception\HandlerNotFoundException;
 use Exception\HttpException;
 use Router\HttpRouter;
+use Throwable;
 
 readonly class HttpHandlerBus
 {
@@ -23,7 +25,7 @@ readonly class HttpHandlerBus
     }
 
     /**
-     * @throws HttpException
+     * @throws Throwable
      */
     public function handle(HttpRequest $request, HttpContext $context, HostConfig $rootHostConfig): HttpResponse
     {
@@ -32,28 +34,32 @@ readonly class HttpHandlerBus
 
         if ($handlerConfig instanceof CgiHandlerConfig) {
             /** @var CgiHttpHandler $handler */
-            $handler = $this->handlers[HandlerConfigInterface::TYPE_CGI] ?? throw new HttpException(500);
+            $handler = $this->handlers[HandlerConfigInterface::TYPE_CGI]
+                ?? throw HandlerNotFoundException::fromType(HandlerConfigInterface::TYPE_CGI);
 
             return $handler->handle($request, $context, $hostConfig->webroot, $handlerConfig->executable);
         }
 
         if ($handlerConfig instanceof FileHandlerConfig) {
             /** @var FileHttpHandler $handler */
-            $handler = $this->handlers[HandlerConfigInterface::TYPE_FILE] ?? throw new HttpException(500); // TODO !!!
+            $handler = $this->handlers[HandlerConfigInterface::TYPE_FILE]
+                ?? throw HandlerNotFoundException::fromType(HandlerConfigInterface::TYPE_FILE);
 
             return $handler->handle($request, $hostConfig->webroot, $hostConfig->indexFiles);
         }
 
         if ($handlerConfig instanceof ForwardHandlerConfig) {
             /** @var ForwardHttpHandler $handler */
-            $handler = $this->handlers[HandlerConfigInterface::TYPE_FORWARD] ?? throw new HttpException(500);
+            $handler = $this->handlers[HandlerConfigInterface::TYPE_FORWARD]
+                ?? throw HandlerNotFoundException::fromType(HandlerConfigInterface::TYPE_FORWARD);
 
             return $handler->handle($request, $handlerConfig->to);
         }
 
         if ($handlerConfig instanceof RedirectHandlerConfig) {
             /** @var RedirectHttpHandler $handler */
-            $handler = $this->handlers[HandlerConfigInterface::TYPE_REDIRECT] ?? throw new HttpException(500);
+            $handler = $this->handlers[HandlerConfigInterface::TYPE_REDIRECT]
+                ?? throw HandlerNotFoundException::fromType(HandlerConfigInterface::TYPE_REDIRECT);
 
             return $handler->handle($request, $handlerConfig->to, $handlerConfig->code);
         }
