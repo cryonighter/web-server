@@ -2,6 +2,7 @@
 
 use DTO\Config\GlobalConfig;
 use DTO\HttpContext;
+use Exception\AbortedConnectionException;
 use Exception\EncryptionSocketException;
 use Exception\HttpException;
 use Factory\HttpRequestFactory;
@@ -162,18 +163,28 @@ class WebServer
                     $response = $this->httpHandlerBus->handle($request, $context, $hostConfig);
 
                     foreach ($response->read(1048576) as $chunk) {
-                        fwrite($connection, $chunk);
+                        $written = @fwrite($connection, $chunk);
+
+                        if ($written === false) {
+                            if (feof($connection)) {
+                                throw new AbortedConnectionException('Connection closed by peer');
+                            }
+
+                            throw new RuntimeException('Failed to write response');
+                        }
                     }
 
                     $this->logger->info("Response sent: $response->protocol $response->code $response->message");
-                } catch (EncryptionSocketException $exception) {
+                } catch (AbortedConnectionException|EncryptionSocketException $exception) {
                     $this->logger->info($exception->getMessage());
                 } catch (Throwable $exception) {
                     if (!$exception instanceof HttpException || !$exception->is4xx()) {
                         $this->logger->error($exception);
                     }
 
-                    $response = $this->httpResponseFactory->createFromException($exception);
+                    $code = $exception->getCode() ?: 500;
+
+                    $response = $this->httpResponseFactory->createFromException($exception, $code);
 
                     $this->logger->info("Response sent: $response->protocol $response->code $response->message");
 

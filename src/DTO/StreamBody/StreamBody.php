@@ -1,16 +1,21 @@
 <?php
 
-namespace DTO;
+namespace DTO\StreamBody;
 
 use RuntimeException;
 
-class StreamBody
+class StreamBody implements StreamBodyInterface
 {
     public function __construct(private $stream)
     {
         if (!is_resource($this->stream)) {
-            throw new RuntimeException("The stream body is not a resource");
+            throw new RuntimeException('The stream body is not a resource');
         }
+    }
+
+    public function __destruct()
+    {
+        fclose($this->stream);
     }
 
     public function read(int $size): iterable

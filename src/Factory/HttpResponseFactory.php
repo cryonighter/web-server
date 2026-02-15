@@ -3,7 +3,7 @@
 namespace Factory;
 
 use DTO\HttpResponse;
-use DTO\StreamBody;
+use DTO\StreamBody\StreamBodyInterface;
 use Exception\HttpException;
 use Parser\HttpParser;
 use Throwable;
@@ -19,7 +19,7 @@ readonly class HttpResponseFactory
         int $code,
         string $message,
         array $headers,
-        StreamBody|string $body = '',
+        StreamBodyInterface|string $body = '',
     ): HttpResponse {
         return new HttpResponse($protocol, $code, $message, $headers, $body);
     }
@@ -41,7 +41,7 @@ readonly class HttpResponseFactory
         );
     }
 
-    public function createFromException(Throwable $exception): HttpResponse
+    public function createFromException(Throwable $exception, int $code = 500): HttpResponse
     {
         $headers = ['Content-Type' => ['text/plain']];
         $protocol = 'HTTP/1.1';
@@ -50,6 +50,6 @@ readonly class HttpResponseFactory
             return $this->create($protocol, $exception->getCode(), $exception->getMessage(), $headers);
         }
 
-        return $this->create($protocol, 500,  HttpException::CODES[500], $headers);
+        return $this->create($protocol, $code,  HttpException::CODES[$code], $headers);
     }
 }

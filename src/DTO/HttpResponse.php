@@ -2,6 +2,8 @@
 
 namespace DTO;
 
+use DTO\StreamBody\StreamBodyInterface;
+
 readonly class HttpResponse
 {
     public function __construct(
@@ -9,7 +11,7 @@ readonly class HttpResponse
         public int $code,
         public string $message,
         public array $headers,
-        public StreamBody|string $body = '',
+        public StreamBodyInterface|string $body = '',
     ) {
     }
 
@@ -27,7 +29,7 @@ readonly class HttpResponse
             yield $chunk;
         } while ($headersBlockPosition < $headersBlockSize);
 
-        if ($this->body instanceof StreamBody) {
+        if ($this->body instanceof StreamBodyInterface) {
             yield from $this->body->read($size);
         }
     }

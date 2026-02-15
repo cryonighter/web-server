@@ -4,7 +4,7 @@ namespace Handler;
 
 use DTO\HttpRequest;
 use DTO\HttpResponse;
-use DTO\StreamBody;
+use DTO\StreamBody\StreamBody;
 use Exception\HttpException;
 use Factory\HttpResponseFactory;
 use Logger\LoggerInterface;

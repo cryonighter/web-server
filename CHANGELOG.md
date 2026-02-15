@@ -7,6 +7,9 @@ This project adheres to [Semantic Versioning v2.0.0](http://semver.org/).
 ### Added
 - CGI support
 
+### Fixed
+- Bug that caused the client to disconnect when sending streaming data to it
+
 ## [0.3.0] - 2026-01-30
 ### Added
 - Welcome page
